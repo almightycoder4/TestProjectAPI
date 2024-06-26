@@ -10,10 +10,8 @@ import glob
 import pytesseract
 from openbharatocr.ocr.aadhaar import extract_aadhaar, extract_dob, extract_name, extract_gender, extract_address, extract_fathers_name
 # Load the YOLOv8 model
-def load_model(model_path):
-    return YOLO(model_path)
-
-model = YOLO("/workspace/TestProjectAPI/app/aadhaar.pt")
+model = YOLO('aadhaar.pt')
+#model = YOLO('../aadhaar.pt')
 
 def clear_directory(directory):
     if not os.path.exists(directory):
@@ -29,7 +27,7 @@ def download_image(url):
     img = Image.open(BytesIO(response.content))
     return img
 
-def detect_and_crop(image_url, output_dir="..gitpod/"):
+def detect_and_crop(image_url, output_dir="tmp"):
     print("I am here , before clear")
     # Clear the output directory
     clear_directory(output_dir)
