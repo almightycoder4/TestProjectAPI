@@ -1,0 +1,8 @@
+Flask
+requests
+Pillow
+numpy
+torch
+ultralytics
+pytesseract
+opencv-python
