@@ -8,7 +8,7 @@
         }
       },
       {
-        "src": "run.py",
+        "src": "python3 run.py",
         "use": "@vercel/python"
       }
     ],
