@@ -1,8 +1,9 @@
-Flask
-requests
-Pillow
-numpy
+Flask==2.0.2
+Werkzeug==2.0.2
 torch
 ultralytics
+opencv-python-headless
+Pillow
+requests
 pytesseract
-opencv-python
+gunicorn

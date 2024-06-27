@@ -1,93 +1,48 @@
-import torch
-from ultralytics import YOLO
-import cv2
 from PIL import Image
-import requests
 from io import BytesIO
-import os
-import numpy as np
-import glob
-import pytesseract
 from openbharatocr.ocr.aadhaar import extract_aadhaar, extract_dob, extract_name, extract_gender, extract_address, extract_fathers_name
-# Load the YOLOv8 model
-model = YOLO('aadhaar.pt')
-#model = YOLO('../aadhaar.pt')
 
-def clear_directory(directory):
-    if not os.path.exists(directory):
-        os.makedirs(directory)
-    files = glob.glob(os.path.join(directory, '*'))
-    for f in files:
-        os.remove(f)
-    print(f"Cleared {directory} directory.")
+import pytesseract
 
-def download_image(url):
-    print('download start')
-    response = requests.get(url)
-    img = Image.open(BytesIO(response.content))
-    return img
-
-def detect_and_crop(image_url, output_dir="tmp"):
-    print("I am here , before clear")
-    # Clear the output directory
-    clear_directory(output_dir)
-   
-    # Download image
-    print('I am here, Imgurl', image_url)
-    image = download_image(image_url)
-    image_cv = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
-    
-    # Perform detection
-    results = model(image_cv)
-    print('I am here, after clear', results)
-    extracted_data = {}
-    
-    label_map = {
-        0: "aadharNo",
-        1: "dob",
-        2: "gender",
-        3: "name",
-        4: "address"
+def process_results(results, img):
+    extracted_data = {
+        "aadharNo": "",
+        "name": "",
+        "dob": "",
+        "gender": "",
+        "address": ""
     }
-    
-    # Iterate over detected objects
-    for i, result in enumerate(results):
-        boxes = result.boxes  # This holds the bounding boxes
-        for j, box in enumerate(boxes):
-            x_min, y_min, x_max, y_max = map(int, box.xyxy[0])
-            label_index = int(box.cls)
-            label = label_map.get(label_index, f"label_{label_index}")
-            cropped_img = image.crop((x_min, y_min, x_max, y_max)).convert('RGB')
-            
-            # Define the output file path
-            output_path = os.path.join(output_dir, f"{label}_{i}_{j}.jpg")
-            
-            # Save the cropped image
-            cropped_img.save(output_path)
-            print(f"Saved cropped image: {output_path}")
-            
-            try:
-                # Perform OCR on the cropped image
-                custom_config = r'--oem 3 --psm 6'
-                ocr_result = pytesseract.image_to_string(output_path, lang='eng', config=custom_config).strip()
-                if label == "aadharNo":
-                    ocr_result = extract_aadhaar(ocr_result).replace(' ', '')
+
+    labels = ["aadharNo", "dob", "gender", "name", "address"]
+    for result in results:
+        for i, (bbox, cls) in enumerate(zip(result.boxes.xyxy, result.boxes.cls)):
+            label = labels[int(cls)]
+            x1, y1, x2, y2 = map(lambda x: int(x.item()), bbox)
+            crop_img = img.crop((x1, y1, x2, y2))
+            buffer = BytesIO()
+            #if image format is jpg then save buffer according 
+            if crop_img.format == 'JPEG':
+                crop_img.save(buffer, format="JPEG")
+            else:
+                crop_img.save(buffer, format="PNG")
                 
-                if label == "name":
-                    ocr_result = extract_name(ocr_result)
+            buffer.seek(0)
+
+            # OCR
+            custom_config = r'--oem 3 --psm 6'
+            ocr_result = pytesseract.image_to_string(Image.open(buffer), lang='eng', config=custom_config).replace('\n', ' ').strip()
+            print(f"{label}: {ocr_result}")
+            if label == "aadharNo":
+                ocr_result = extract_aadhaar(ocr_result).replace(' ', '')
                 
-                if label == "fathersName":
-                    ocr_result = extract_fathers_name(ocr_result)
+            if label == "name":
+                ocr_result = extract_name(ocr_result)
                 
-                if label == "dob":
-                    ocr_result = extract_dob(ocr_result)
+            if label == "fathersName":
+                ocr_result = extract_fathers_name(ocr_result)
                 
-                extracted_data[label] = ocr_result.replace('\n', ' ')
-                print(f"OCR result for {label}: {ocr_result}")
-            except pytesseract.TesseractError as e:
-                print(f"Error during OCR for {output_path}: {e}")
-                error_message = e.stderr.decode('utf-8', errors='ignore')
-                print(f"Tesseract error details: {error_message}")
-                extracted_data[label] = ""
-    
+            if label == "dob":
+                ocr_result = extract_dob(ocr_result)
+            extracted_data[label] = ocr_result
+
     return extracted_data
