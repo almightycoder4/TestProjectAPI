@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Update package list and install dependencies
-apt install sudo
+#apt install sudo
 sudo apt-get update
 sudo apt-get install -y tesseract-ocr libgl1-mesa-glx python3 python3-pip
 
