@@ -15,7 +15,7 @@
     "routes": [
       {
         "src": "/(.*)",
-        "dest": "run.py"
+        "dest": "python3 run.py"
       }
     ]
   }
