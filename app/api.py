@@ -18,6 +18,10 @@ def aadhaar_ocr():
         response = requests.get(img_url)
         img = Image.open(BytesIO(response.content))
 
+        # Check image format
+        if img.format not in ['JPEG', 'JPG', 'PNG']:
+            return jsonify({"error": "Invalid image format. Only JPG and PNG are supported."}), 400
+
         # Run detection
         model = current_app.model
         results = model.predict(source=img, save=False)
